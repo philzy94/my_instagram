@@ -23,6 +23,7 @@ const Home = () => {
   const { user } = useContext(AuthContext);
   const [suggestUsers, setSuggestUsers] = useState();
   const [posts, setposts] = useState([]);
+  const [posts1, setposts1] = useState([]);
   const [limitNum, setLimitNum] = useState(9);
   const [userProfile, setUserProfile] = useState(null);
   useEffect(() => {
@@ -38,7 +39,7 @@ const Home = () => {
           id: doc.id,
         }));
         setposts(posts);
-        // console.log(posts);
+        setposts1(posts);
       });
     };
     return getData();
@@ -68,7 +69,7 @@ const Home = () => {
   }, []);
   return (
     <>
-      <Header />
+      <Header setPosts={setposts} posts={posts1} />
       <div className="flex md:mt-14  max-w-4xl gap-2 mx-auto mb-8">
         <div className="w-full md:w-[70%]">
           <Stories />

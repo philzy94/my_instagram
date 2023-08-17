@@ -16,6 +16,7 @@ import {
   query,
   setDoc,
   where,
+  updateDoc,
 } from "firebase/firestore";
 import { firestore, storage } from "../firebase/config";
 import { AuthContext } from "../context/AuthContext";
@@ -30,6 +31,7 @@ import { MdAddAPhoto as EditProfileIcon } from "react-icons/md";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import NotFound from "../components/NotFound";
 import Loading from "../components/Loading";
+import moment from 'moment';
 
 const Profile = () => {
   const params = useParams();
@@ -43,6 +45,26 @@ const Profile = () => {
   const [noUser, setNoUser] = useState(true);
   const navigate = useNavigate();
 
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [updatedProfile, setUpdatedProfile] = useState({});
+  const handleEditClick = () => {
+    // Open the edit profile form or modal
+    setEditingProfile(true);
+  };
+
+  const handleEditProfileSubmit = async () => {
+    try {
+      // Update profile data in Firestore
+      const userRef = doc(firestore, `user/${user?.uid}`);
+      await updateDoc(userRef, updatedProfile);
+
+      // Close the edit profile form or modal
+      setEditingProfile(false);
+      console.log('Profile updated successfully');
+    } catch (error) {
+      console.error('Error updating profile: ', error);
+    }
+  };
   useEffect(() => {
     const getData = async () => {
       const userQuery = query(
@@ -50,10 +72,11 @@ const Profile = () => {
         where("username", "==", username)
       );
       onSnapshot(userQuery, (users) => {
-        // console.log(users);
+
         if (!users.empty) {
           setPostIds(users?.docs[0]?.data()?.posts);
           setProfileUser({ id: users.docs[0].id, ...users?.docs[0]?.data() });
+          //console.log(profileUser)
           setIsLoading(false);
           setNoUser(false);
           // console.log(noUser);
@@ -81,8 +104,9 @@ const Profile = () => {
         try {
           const response = await readIds(postIds);
           if (response) {
-            setPosts(response);
-            // console.log(response);
+            const filteredData = response.filter(item => Object.keys(item).length > 1);
+             //console.log(filteredData);
+            setPosts(filteredData);
           }
         } catch (error) {
           console.log(error);
@@ -113,7 +137,7 @@ const Profile = () => {
   };
 
   const unFollowProfile = async () => {
-    console.log("follow", profileUser);
+   // console.log("follow", profileUser);
     if (!user) navigate("/login");
     if (user) {
       setDoc(
@@ -132,6 +156,23 @@ const Profile = () => {
       );
     }
   };
+  function formatTimeAgo(timestampSeconds) {
+    const currentTimestamp = Math.floor(Date.now() / 1000); // Current timestamp in seconds
+    const difference = currentTimestamp - timestampSeconds; // Difference in seconds
+
+    if (difference < 60) {
+      return `${difference} seconds ago`;
+    } else if (difference < 3600) {
+      const minutes = Math.floor(difference / 60);
+      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    } else if (difference < 86400) {
+      const hours = Math.floor(difference / 3600);
+      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    } else {
+      const days = Math.floor(difference / 86400);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    }
+  }
 
   return (
     <div>
@@ -145,7 +186,7 @@ const Profile = () => {
                   {/* profile image */}
                   <div className="relative group w-20 h-20 md:w-40 md:h-40 object-cover overflow-hidden rounded-full">
                     {profileUser?.id === user?.uid && (
-                      <div className="absolute cursor-pointer opacity-0 group-hover:opacity-100 duration-75 transition-all top-0 left-0 h-full w-full bg-black/70 flex items-center justify-center text-2xl md:text-4xl text-white aspect-square">
+                      <div htmlFor="profile-image" className="absolute cursor-pointer opacity-0 group-hover:opacity-100 duration-75 transition-all top-0 left-0 h-full w-full bg-black/70 flex items-center justify-center text-2xl md:text-4xl text-white aspect-square">
                         <EditProfileIcon
                           htmlFor="profile-image"
                           onClick={() => profilePic.current.click()}
@@ -170,7 +211,7 @@ const Profile = () => {
                             uploadTask.on(
                               "state_changed",
                               (snap) => {
-                                console.log(snap);
+                               // console.log(snap);
                               },
                               (err) => console.log(err),
                               () => {
@@ -204,6 +245,9 @@ const Profile = () => {
                       alt={profileUser?.fullName}
                     />
                   </div>
+
+                  {user?.uid === profileUser?.id && <div className="btn">Click on the picture to edit Profile</div>}
+
                 </div>
                 {/* profile meta */}
                 <div className="w-8/12 md:w-7/12 ml-4">
@@ -246,7 +290,7 @@ const Profile = () => {
                   <ul className="hidden md:flex space-x-8 mb-4">
                     <li>
                       <span className="font-semibold">
-                        {profileUser?.posts?.length || 0}{" "}
+                        {posts?.length || 0}{" "}
                       </span>
                       posts
                     </li>
@@ -311,7 +355,13 @@ const Profile = () => {
                 >
                   <li>
                     <span className="font-semibold text-gray-800 block">
-                      {profileUser?.posts?.length || 0}{" "}
+                      {posts?.length || 0}{" "}
+                      reference_time = Time.at(0)  # Assuming Unix epoch as the reference point
+
+converted_time = reference_time + timestamp_seconds
+formatted_date = converted_time.strftime("%Y-%m-%d %H:%M:%S")
+                      {/*{console.log(posts[0]?.createdAt?.nanoseconds)}*/}
+
                     </span>
                     posts
                   </li>

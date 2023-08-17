@@ -29,6 +29,7 @@ import { MdVerified as VerifiedIcon } from "react-icons/md";
 
 import {
   addDoc,
+  deleteDoc,
   arrayRemove,
   collection,
   doc,
@@ -41,8 +42,11 @@ import {
 } from "firebase/firestore";
 import { firestore } from "../firebase/config";
 import { AuthContext } from "../context/AuthContext";
+import { useNavigate, useParams } from "react-router-dom";
+import moment from 'moment';
 
 const HomePostCard = ({ post }) => {
+  const navigate = useNavigate();
   const [commentInput, setCommentInput] = useState("");
   const [commentsArr, setCommentsArr] = useState([]);
   const [limitNum, setLimitNum] = useState(2);
@@ -50,6 +54,7 @@ const HomePostCard = ({ post }) => {
   const [saved, setSaved] = useState(false);
   const { user } = useContext(AuthContext);
   const swiper = useSwiper();
+
 
   const likePost = async () => {
     const postRef = doc(firestore, `posts/${post?.id}`);
@@ -62,6 +67,7 @@ const HomePostCard = ({ post }) => {
     );
     setLiked(true);
   };
+  //console.log(post)
 
   const unlikePost = async () => {
     const postRef = doc(firestore, `posts/${post?.id}`);
@@ -78,7 +84,7 @@ const HomePostCard = ({ post }) => {
   };
 
   const savePost = async () => {
-    console.log(user.uid, post.id);
+    //console.log(user.uid, post.id);
     const userRef = doc(firestore, `user/${user.uid}`);
     const postRef = doc(firestore, `posts/${post.id}`);
     updateDoc(
@@ -116,6 +122,22 @@ const HomePostCard = ({ post }) => {
       { merge: true }
     );
     setSaved(false);
+  };
+  const deletePost = async (postId) => {
+    const confirmed = window.confirm('Are you sure you want to delete this post?');
+    if (confirmed) {
+      const postRef = doc(firestore, `posts/${postId}`);
+      try {
+        await deleteDoc(postRef);
+        console.log("Post deleted successfully");
+        // You can add any UI updates or navigate to a different page if needed
+        alert("Post deleted successfully")
+        navigate("/")
+      } catch (error) {
+        console.error("Error deleting post: ", error);
+      }
+    }
+
   };
 
   const commentSubmit = (e) => {
@@ -167,6 +189,12 @@ const HomePostCard = ({ post }) => {
     getComments();
   }, [limitNum]);
 
+  function formatTimeAgo(date) {
+    const formatDate = date.toDate()
+
+    return moment(formatDate, "YYYYMMDD").fromNow()
+  }
+
   return (
     <div
       animate={{ opacity: 1 }}
@@ -185,11 +213,19 @@ const HomePostCard = ({ post }) => {
             alt={post?.user?.fullName}
           />
         </Link>
-        <div className="flex-grow">
+
+        <div className="flex-grow ">
+          <div className="flex">
+
           <Link to={`/${post?.user?.username}`} className="font-semibold">
             {post?.user?.username}
           </Link>
+        <div>&nbsp;{formatTimeAgo(post?.createdAt)}</div>
+          </div>
         </div>
+        {user?.uid === post?.user?.uid && <button onClick={() => deletePost(post.id)} className="btn bg-red-700 px-3 py-1 rounded text-white">
+          Delete post
+        </button>}
         <button>
           <PostMenuIcon />
         </button>

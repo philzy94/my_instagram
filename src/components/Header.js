@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 
 // uuid
@@ -39,7 +39,7 @@ import Swiper, { Pagination } from "swiper";
 import { SwiperSlide } from "swiper/react";
 import { ReelFillIcon, ReelIcon } from "../constants/icons";
 
-const Header = () => {
+const Header = ({setPosts, posts}) => {
   const { user, logout } = useContext(AuthContext);
   const [modelOpen, setModelOpen] = useState(false);
   const [percentage, setPercentage] = useState(0);
@@ -49,9 +49,25 @@ const Header = () => {
   const [uploadComplete, setUploadComplete] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+
+  const search = (e)=>{
+    setSearchValue(e.target.value);
+    if(e.target.value === null || e.target.value === ""){
+      setPosts(posts)
+      return
+    }
+    let filterPosts = posts.filter(function (item) {
+      return item?.user?.username.toLowerCase().includes(e.target.value.toLowerCase())
+    });
+    setPosts(filterPosts);
+  }
+
+  //console.log(posts)
 
   const uploadImage = (e) => {
     e.preventDefault();
+
     const storageRef = ref(storage, `users/${user?.uid}/posts/${uuid()}`);
     const uploadSingleImage = uploadBytesResumable(storageRef, images[0]);
     uploadSingleImage.on(
@@ -62,12 +78,12 @@ const Header = () => {
       },
       (err) => console.log(err),
       () => {
+        alert("pass")
         getDownloadURL(uploadSingleImage.snapshot.ref).then(
           async (downloadURL) => {
-            console.log("File available at", downloadURL);
             const postDoc = await addDoc(collection(firestore, "posts"), {
               caption,
-              createdAt: serverTimestamp(),
+              createdAt: new Date(),
               singleMedia: { src: downloadURL },
               user: {
                 fullname: user?.displayName,
@@ -76,7 +92,7 @@ const Header = () => {
                 uid: user?.uid,
               },
             });
-            console.log(postDoc?.id);
+           // console.log(postDoc?.id);
             setDoc(
               doc(firestore, `user/${user?.uid}`),
               {
@@ -121,6 +137,8 @@ const Header = () => {
                     type="text"
                     placeholder="Search"
                     className="bg-transparent h-full outline-none"
+                    value={searchValue}
+                    onChange={search}
                   />
                 </div>
               </form>
